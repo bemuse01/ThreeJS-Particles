@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <script src="three r107.js"></script>
+		<style>
+            body{
+                background: black;
+                padding: 0;
+                margin: 0;
+                overflow: hidden;
+            }
+            #canvas{
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+            }
+		</style>
+	</head>
+	<body>
+    <canvas id="canvas"></canvas>
+    
+	<script>
+    let width, height, vWidth, vHeight, renderer, scene, camera
+    let particleGroup
+    let radian = Math.PI / 180
+
+	width = window.innerWidth
+	height = window.innerHeight
+    
+    init();
+	function init(){
+        scene = new THREE.Scene()
+        
+		renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, canvas: canvas})
+		renderer.setSize(width, height)
+		renderer.setClearColor(0x000000)
+        renderer.setClearAlpha(0.0)
+        
+        particleGroup = new THREE.Group()
+
+		camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000)
+		scene.add(camera)
+        camera.position.z = 50
+
+        particleObject()
+
+        animate()
+
+        window.addEventListener('resize', onWindowResize, false)
+    }
+
+    function particleObject(){
+        let particle = {
+            count: 400,
+            size: 0.075,
+            segments: 32,
+            opacity: 0.5
+        }
+        for(let i = 0; i < particle.count; i++){
+            let degree = {x: Math.random() * 45, y: Math.random() * 45}
+            let cos = Math.cos(degree.x * radian), sin = Math.sin(degree.y * radian)
+            let velocity = {x: (cos + sin) * Math.random() * 0.1 + 0.1, y:-(Math.random() * 0.05 + 0.05)}
+
+            let geometry = new THREE.CircleGeometry(particle.size, particle.segments);
+            let material = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: Math.random() * particle.opacity + particle.opacity
+            })
+            let mesh = new THREE.Mesh(geometry, material)
+            // mesh.position.z = getRandomDepth(10)
+            let scale = getRandomScale(1)
+            mesh.scale.set(scale, scale , 1)
+            mesh.position.x = getRandomWidth(mesh.position.z)
+            mesh.position.y = getRandomHeight(mesh.position.z)
+            mesh.velocity = velocity
+
+            particleGroup.add(mesh)
+        }
+        scene.add(particleGroup)
+    }
+
+    function getRandomScale(range){
+        //return Math.random() * range / 2 + range
+        return Math.random() * range
+    }
+
+    function getRandomDepth(range){
+        return Math.random() * range * 2 - range
+    }
+
+    function getRandomWidth(depth, i){
+        let x = getVisibleWidth(depth) * 0.5
+        return Math.random() * x * 2 - x
+    }
+    
+    function getRandomHeight(depth){
+        let y = getVisibleHeight(depth) * 0.5
+        return Math.random() * y * 2 - y
+    }
+
+    function particleMove(){
+        let vWidth = getVisibleWidth(particleGroup.children[0].position.z) / 2, vHeight = getVisibleHeight(particleGroup.children[0].position.z) / 2
+        particleGroup.children.forEach(e => {
+            e.position.x += e.velocity.x
+            e.position.y += e.velocity.y
+
+            if(e.position.x >= vWidth) e.position.x = -vWidth
+            if(e.position.y <= -vHeight) e.position.y = vHeight
+
+            e.geometry.verticesNeedUpdate = true;
+        })
+    }
+
+    function getVisibleHeight(depth){
+        let cameraOffset = camera.position.z
+        if(depth < cameraOffset) depth -= cameraOffset
+        else depth += cameraOffset
+        let vFov = camera.fov * radian
+        return 2 * Math.tan(vFov / 2) * Math.abs(depth)
+    }
+
+    function getVisibleWidth(depth){
+        let height = getVisibleHeight(depth)
+        return height * camera.aspect
+    }
+
+    function onWindowResize(){
+		width = window.innerWidth
+		height = window.innerHeight
+
+		camera.aspect = width / height
+		camera.updateProjectionMatrix()
+
+		renderer.setSize(width, height)
+    }
+
+	function render(){
+        particleMove()
+		camera.lookAt(scene.position)
+		renderer.render(scene, camera)
+    }
+
+	function animate(){
+		render()
+		requestAnimationFrame(animate)
+	}
+	</script>
+	</body>
+</html>
